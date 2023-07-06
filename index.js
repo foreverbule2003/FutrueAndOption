@@ -1,43 +1,70 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
+const ObjectsToCsv = require('objects-to-csv');
+
 const specDate = process.argv[2];
 console.log({ specDate });
 
+const futureUrl = "https://www.taifex.com.tw/cht/3/futContractsDate";
+const optionUrl = 'https://www.taifex.com.tw/cht/3/callsAndPutsDate';
 
-const sitePath = "https://www.taifex.com.tw/cht/3/futContractsDate";
-
-
-const getUrl = (specDate) => {
-  if (!specDate) return sitePath;
+const getUrl = (url) => {
+  if (!specDate) return url;
   const month = specDate.slice(0, 2);
   const date = specDate.slice(2);
   const reqCondition = `?queryType=1&goDay=&doQuery=1&dateaddcnt=&queryDate=2023%2F${month}%2F${date}&commodityId=`;
-  return sitePath + reqCondition;
+  return url + reqCondition;
 }
-const url = getUrl(specDate);
+
+const convertData2Csv = (data) => {
+  (async () => {
+    const csv = new ObjectsToCsv(data);
+
+    // Save to file:
+    await csv.toDisk('./test.csv',
+    );
+  })();
+};
+
 const toNumber = (content) => Number(content.replace(/[^0-9.-]+/g, ""));
 const getHtmlContent = (content) => toNumber(content.text());
-const tableContentPath4Count = '> div:nth-child(1) > font';
-const tableContentPath4Money = '> div:nth-child(1)';
+const fTableContentPath4Count = '> div:nth-child(1) > font';
+const fTableContentPath4Money = '> div:nth-child(1)';
+const oTableContentPath4Count = '> font';
+const oTableContentPath4Money = '';
 const isCount = (param) => param === 'c';
 
 const tablePath = "#printhere > div:nth-child(4) > table > tbody > tr:nth-child(2) > td > table > tbody";
+
 const getTableContent = (param1, param2) => `> tr:nth-child(${param1}) > td:nth-child(${param2})`;
-const mergeContent = (domEle, param1, param2, param3) => {
-  // console.log(`${tablePath} ${getTableContent(param1, param2)} ${isCount(param3) ? tableContentPath4Count : tableContentPath4Money}`)
-  return domEle(`${tablePath} ${getTableContent(param1, param2)} ${isCount(param3) ? tableContentPath4Count : tableContentPath4Money}`)
+// product: future or option
+// type: count or money
+const mergeContent = (domEle, param1, param2, type, product = 'f') => {
+  const domPath = product === 'f'
+    ? `${tablePath} ${getTableContent(param1, param2)} ${isCount(type) ? fTableContentPath4Count : fTableContentPath4Money}`
+    : `${tablePath} ${getTableContent(param1, param2)} ${isCount(type) ? oTableContentPath4Count : oTableContentPath4Money}`
+  // console.log({ domPath });
+  const result = domEle(domPath);
+  // console.log(result);
+  return result;
 };
 const convertFimt2Fit = (fimt) => fimt / 4;
-// const payload = { queryType: 1, doQuery: 1, queryDate: '2023/07/03' }
-axios
-  .request(url)
+const queryData = async (url) => {
+  let rusult;
+  try {
+    rusult = await axios.request(url);
+  } catch (e) {
+    console.log(e);
+  }
+  return rusult.data;
+};
+
+
+let data = [];
+const getFutureData = queryData(getUrl(futureUrl))
   .then((response) => {
-    const $ = cheerio.load(response.data);
-    // console.log($);
 
-    // const fitTablePath = `${tablePath} > td > table > tbody`;
-
-
+    const $ = cheerio.load(response);
     const fitDealerLongCount = getHtmlContent(mergeContent($, 4, 4, 'c'));
     const fitForeignLongCount = getHtmlContent(mergeContent($, 6, 2, 'c'));
     const fitLongCount = fitDealerLongCount + fitForeignLongCount;
@@ -58,26 +85,8 @@ axios
 
     const fimtNetCount = fimtLongCount - fimtShortCount;
 
-    const fLongCount = fitLongCount + convertFimt2Fit(fimtLongCount);
-    const fShortCount = fitShortCount + convertFimt2Fit(fimtShortCount);
-    // console.log(fitDealerLongCount);
-    // console.log(fitForeignLongCount);
-    // console.log(fitLongCount);
-    // console.log(fitDealerShortCount);
-    // console.log(fitForeignShortCount);
-    // console.log(fitShortCount);
-
-    // console.log({ fitNetCount });
-
-    // console.log({ fimtDealerLongCount });
-    // console.log({ fimtLongCount });
-    // console.log({ fimtShortCount });
-    // console.log({ fimtNetCount });
-    // console.log({ fLongCount });
-    // console.log({ fShortCount });
-
-    fNetCount = fLongCount - fShortCount;
-    // console.log({ fNetCount });
+    const fLongCount = Math.round(fitLongCount + convertFimt2Fit(fimtLongCount));
+    const fShortCount = Math.round(fitShortCount + convertFimt2Fit(fimtShortCount));
 
     const fitDealerLongMoney = getHtmlContent(mergeContent($, 4, 5, 'm'));
     const fitForeignLongMoney = getHtmlContent(mergeContent($, 6, 3, 'm'));
@@ -85,7 +94,6 @@ axios
     const fitForeignShortMoney = getHtmlContent(mergeContent($, 6, 5, 'm'));
     const fitLongMoney = fitDealerLongMoney + fitForeignLongMoney;
     const fitShortMoney = fitDealerShortMoney + fitForeignShortMoney;
-
 
     const fimtDealerLongMoney = getHtmlContent(mergeContent($, 13, 5, 'm'));
     const fimtForeignLongMoney = getHtmlContent(mergeContent($, 15, 3, 'm'));
@@ -96,32 +104,163 @@ axios
 
     const fLongMoney = fitLongMoney + fimtLongMoney;
     const fShortMoney = fitShortMoney + fimtShortMoney;
-    // console.log({ fitDealerLongMoney });
-    // console.log({ fitForeignLongMoney });
-    // console.log({ fitLongMoney });
-    // console.log({ fitShortMoney });
 
-    // console.log({ fimtDealerLongMoney });
-    // console.log({ fimtForeignLongMoney });
-
-    // console.log({ fimtLongMoney });
-    // console.log({ fimtShortMoney });
-    // console.log({ fitDealerShortMoney });
-    // console.log({ fitForeignShortMoney });
-
-    console.log({ fLongMoney });
-    console.log({ fLongCount });
-    console.log({ fShortMoney });
-    console.log({ fShortCount });
+    // console.log({ fLongMoney });
+    // console.log({ fLongCount });
+    // console.log({ fShortMoney });
+    // console.log({ fShortCount });
 
     // 千元與一點兩百元 => *1000 /200 = 5 
     const fLongCost = Math.round(fLongMoney / fLongCount * 5);
     const fShortCost = Math.round(fShortMoney / fShortCount * 5);
 
-    console.log({ fLongCost });
-    console.log({ fShortCost });
+    // console.log({ fLongCost });
+    // console.log({ fShortCost });
+    const fNetCount = Math.round(fLongCount - fShortCount);
+    const fNetMoney = Math.round(fLongMoney - fShortMoney);
+    const fNetCost = Math.round(fNetMoney / fNetCount * 5);
+    const future = {
+      商品: '期貨',
+      買方口數: fLongCount,
+      買方成本: fLongCost,
+      賣方口數: fShortCount,
+      賣方成本: fShortCost,
+      淨口數: fNetCount,
+      淨成本: fNetCost,
+    };
+    data = [...data, future];
+    // data.push(future);
+    // return future;
+    // return new Promise((resolve, reject) => resolve(future));
+  });
+
+const getOptionData = queryData(getUrl(optionUrl))
+  .then((response) => {
+    const $ = cheerio.load(response);
+
+    const callDealerLongCount = getHtmlContent(mergeContent($, 4, 5, 'c', 'o'));
+    const callForeignLongCount = getHtmlContent(mergeContent($, 6, 2, 'c', 'o'));
+    const callLongCount = callDealerLongCount + callForeignLongCount;
+
+    const putDealerLongCount = getHtmlContent(mergeContent($, 7, 3, 'c', 'o'));
+    const putForeignLongCount = getHtmlContent(mergeContent($, 9, 2, 'c', 'o'));
+    const putLongCount = putDealerLongCount + putForeignLongCount;
+
+    const callDealerShortCount = getHtmlContent(mergeContent($, 4, 7, 'c', 'o'));
+    const callForeignShortCount = getHtmlContent(mergeContent($, 6, 4, 'c', 'o'));
+    const callShortCount = callDealerShortCount + callForeignShortCount;
+
+    const putDealerShortCount = getHtmlContent(mergeContent($, 7, 5, 'c', 'o'));
+    const putForeignShortCount = getHtmlContent(mergeContent($, 9, 4, 'c', 'o'));
+    const putShortCount = putDealerShortCount + putForeignShortCount;
+
+    // console.log({ callLongCount });
+    // console.log({ putLongCount });
+
+    // console.log({ callShortCount });
+
+    // console.log({ putDealerShortCount });
+    // console.log({ putForeignShortCount });
+    // console.log({ putShortCount });
+
+
+    const callDealerLongMoney = getHtmlContent(mergeContent($, 4, 6, 'm', 'o'));
+    const callForeignLongMoney = getHtmlContent(mergeContent($, 6, 3, 'm', 'o'));
+    const callLongMoney = callDealerLongMoney + callForeignLongMoney;
+
+    const putDealerLongMoney = getHtmlContent(mergeContent($, 7, 4, 'm', 'o'));
+    const putForeignLongMoney = getHtmlContent(mergeContent($, 9, 3, 'm', 'o'));
+    const putLongMoney = putDealerLongMoney + putForeignLongMoney;
+
+    const callDealerShortMoney = getHtmlContent(mergeContent($, 4, 8, 'm', 'o'));
+    const callForeignShortMoney = getHtmlContent(mergeContent($, 6, 5, 'm', 'o'));
+    const callShortMoney = callDealerShortMoney + callForeignShortMoney;
+
+    const putDealerShortMoney = getHtmlContent(mergeContent($, 7, 6, 'm', 'o'));
+    const putForeignShortMoney = getHtmlContent(mergeContent($, 9, 5, 'm', 'o'));
+    const putShortMoney = putDealerShortMoney + putForeignShortMoney;
+
+    // 千元與一點五十元 => *1000 /50 = 20 
+    const callLongCost = Math.round(callLongMoney / callLongCount * 20);
+    const putLongCost = Math.round(putLongMoney / putLongCount * 20);
+    // console.log({ callDealerLongMoney });
+    // console.log({ callLongCost });
+    // console.log({ putLongCost });
+
+    // console.log({ callShortMoney });
+    // console.log({ putShortMoney });
+
+    const callShortCost = Math.round(callShortMoney / callShortCount * 20);
+    const putShortCost = Math.round(putShortMoney / putShortCount * 20);
+
+    // console.log({ callShortCost });
+    // console.log({ putShortCost });
+
+    const callNetCount = callLongCount - callShortCount;
+    const callNetMoney = callLongMoney - callShortMoney;
+    const callNetCost = Math.round(callNetMoney / callNetCount * 20);
+
+    const putNetCount = putLongCount - putShortCount;
+    const putNetMoney = putLongMoney - putShortMoney;
+    const putNetCost = Math.round(putNetMoney / putNetCount * 20);
+    const call = {
+      商品: 'CALL',
+      買方口數: callLongCount,
+      買方成本: callLongCost,
+      賣方口數: callShortCount,
+      賣方成本: callShortCost,
+      淨口數: callNetCount,
+      淨成本: callNetCost,
+    };
+    const put = {
+      商品: 'PUT',
+      買方口數: putLongCount,
+      買方成本: putLongCost,
+      賣方口數: putShortCount,
+      賣方成本: putShortCost,
+      淨口數: putNetCount,
+      淨成本: putNetCost,
+    };
+    data = [...data, put, call];
+
+    // console.log({ data });
+    // convertData2Csv(data);
+  });
+
+Promise.all([
+  getFutureData,
+  getOptionData
+])
+  .then((response) => {
+    // console.log({ response });
+    // console.log({ data });
+    // convertData2Csv(data)
+    console.log({ data });
+    // const sortData = data.sort((a, b) => a['商品'] - b['商品']);
+    const sortData = data.reverse();
+    console.log({ sortData });
+    convertData2Csv(sortData)
   })
 
-  .catch((error) => {
-    console.log(error);
-  });
+// getFutureData
+//   .then(() => getOptionData
+//     .then(() => {
+//       // console.log({ response });
+//       // console.log({ data });
+
+//       const sortData = data.sort((a, b) => a.商品 - b.商品);
+//       convertData2Csv(sortData)
+//     })
+//   )
+
+// const o1 = { '商品': 'CALL', };
+// const o2 = { '商品': 'PUT', };
+// const o3 = { '商品': '期貨', };
+
+// const arr = [o1, o2, o3]
+// // const r = arr.sort((a, b) => (a, b) => a.商品 - b.商品);
+// const r = arr.sort((a, b) => {
+//   console.log(a['商品']);
+//   return a['商品'] - b['商品']
+// });
+// console.log(r);
