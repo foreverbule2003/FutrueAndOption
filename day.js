@@ -1,6 +1,9 @@
-const axios = require("axios");
 const cheerio = require("cheerio");
-const ObjectsToCsv = require('objects-to-csv');
+const {
+  convertData2Csv,
+  queryData,
+  getHtmlContent,
+} = require('./helper')
 
 const specDate = process.argv[2];
 console.log({ specDate });
@@ -13,21 +16,9 @@ const getUrl = (url) => {
   const month = specDate.slice(0, 2);
   const date = specDate.slice(2);
   const reqCondition = `?queryType=1&goDay=&doQuery=1&dateaddcnt=&queryDate=2023%2F${month}%2F${date}&commodityId=`;
-  return url + reqCondition;
-}
-
-const convertData2Csv = (data) => {
-  (async () => {
-    const csv = new ObjectsToCsv(data);
-
-    // Save to file:
-    await csv.toDisk('./test.csv',
-    );
-  })();
+  return `${url}${reqCondition}`;
 };
 
-const toNumber = (content) => Number(content.replace(/[^0-9.-]+/g, ""));
-const getHtmlContent = (content) => toNumber(content.text());
 const fTableContentPath4Count = '> div:nth-child(1) > font';
 const fTableContentPath4Money = '> div:nth-child(1)';
 const oTableContentPath4Count = '> font';
@@ -37,6 +28,7 @@ const isCount = (param) => param === 'c';
 const tablePath = "#printhere > div:nth-child(4) > table > tbody > tr:nth-child(2) > td > table > tbody";
 
 const getTableContent = (param1, param2) => `> tr:nth-child(${param1}) > td:nth-child(${param2})`;
+
 // product: future or option
 // type: count or money
 const mergeContent = (domEle, param1, param2, type, product = 'f') => {
@@ -49,16 +41,6 @@ const mergeContent = (domEle, param1, param2, type, product = 'f') => {
   return result;
 };
 const convertFimt2Fit = (fimt) => fimt / 4;
-const queryData = async (url) => {
-  let rusult;
-  try {
-    rusult = await axios.request(url);
-  } catch (e) {
-    console.log(e);
-  }
-  return rusult.data;
-};
-
 
 let data = [];
 const getFutureData = queryData(getUrl(futureUrl))
@@ -105,11 +87,6 @@ const getFutureData = queryData(getUrl(futureUrl))
     const fLongMoney = fitLongMoney + fimtLongMoney;
     const fShortMoney = fitShortMoney + fimtShortMoney;
 
-    // console.log({ fLongMoney });
-    // console.log({ fLongCount });
-    // console.log({ fShortMoney });
-    // console.log({ fShortCount });
-
     // 千元與一點兩百元 => *1000 /200 = 5 
     const fLongCost = Math.round(fLongMoney / fLongCount * 5);
     const fShortCost = Math.round(fShortMoney / fShortCount * 5);
@@ -129,9 +106,6 @@ const getFutureData = queryData(getUrl(futureUrl))
       淨成本: fNetCost,
     };
     data = [...data, future];
-    // data.push(future);
-    // return future;
-    // return new Promise((resolve, reject) => resolve(future));
   });
 
 const getOptionData = queryData(getUrl(optionUrl))
@@ -154,16 +128,6 @@ const getOptionData = queryData(getUrl(optionUrl))
     const putForeignShortCount = getHtmlContent(mergeContent($, 9, 4, 'c', 'o'));
     const putShortCount = putDealerShortCount + putForeignShortCount;
 
-    // console.log({ callLongCount });
-    // console.log({ putLongCount });
-
-    // console.log({ callShortCount });
-
-    // console.log({ putDealerShortCount });
-    // console.log({ putForeignShortCount });
-    // console.log({ putShortCount });
-
-
     const callDealerLongMoney = getHtmlContent(mergeContent($, 4, 6, 'm', 'o'));
     const callForeignLongMoney = getHtmlContent(mergeContent($, 6, 3, 'm', 'o'));
     const callLongMoney = callDealerLongMoney + callForeignLongMoney;
@@ -183,18 +147,9 @@ const getOptionData = queryData(getUrl(optionUrl))
     // 千元與一點五十元 => *1000 /50 = 20 
     const callLongCost = Math.round(callLongMoney / callLongCount * 20);
     const putLongCost = Math.round(putLongMoney / putLongCount * 20);
-    // console.log({ callDealerLongMoney });
-    // console.log({ callLongCost });
-    // console.log({ putLongCost });
-
-    // console.log({ callShortMoney });
-    // console.log({ putShortMoney });
 
     const callShortCost = Math.round(callShortMoney / callShortCount * 20);
     const putShortCost = Math.round(putShortMoney / putShortCount * 20);
-
-    // console.log({ callShortCost });
-    // console.log({ putShortCost });
 
     const callNetCount = callLongCount - callShortCount;
     const callNetMoney = callLongMoney - callShortMoney;
@@ -222,45 +177,13 @@ const getOptionData = queryData(getUrl(optionUrl))
       淨成本: putNetCost,
     };
     data = [...data, put, call];
-
-    // console.log({ data });
-    // convertData2Csv(data);
   });
 
 Promise.all([
   getFutureData,
   getOptionData
 ])
-  .then((response) => {
-    // console.log({ response });
-    // console.log({ data });
-    // convertData2Csv(data)
-    console.log({ data });
-    // const sortData = data.sort((a, b) => a['商品'] - b['商品']);
+  .then(() => {
     const sortData = data.reverse();
-    console.log({ sortData });
     convertData2Csv(sortData)
-  })
-
-// getFutureData
-//   .then(() => getOptionData
-//     .then(() => {
-//       // console.log({ response });
-//       // console.log({ data });
-
-//       const sortData = data.sort((a, b) => a.商品 - b.商品);
-//       convertData2Csv(sortData)
-//     })
-//   )
-
-// const o1 = { '商品': 'CALL', };
-// const o2 = { '商品': 'PUT', };
-// const o3 = { '商品': '期貨', };
-
-// const arr = [o1, o2, o3]
-// // const r = arr.sort((a, b) => (a, b) => a.商品 - b.商品);
-// const r = arr.sort((a, b) => {
-//   console.log(a['商品']);
-//   return a['商品'] - b['商品']
-// });
-// console.log(r);
+  });
