@@ -15,26 +15,37 @@ const convertData2Csv = (data) => {
     const yesterday = String(date.getDate() - 1).padStart(2, "0");
     const tomorrow = String(date.getDate() + 1).padStart(2, "0");
     // console.log({ mm });
-    console.log({ dd });
-    console.log({ tomorrow });
+    // console.log({ dd });
+    // console.log({ tomorrow });
     let specficDay = process.argv[2];
 
     // 盤中只能抓到昨天的資料
     const isDayTradingTime = date.getHours() > 9 && date.getHours() < 14;
     const isNightTradingTime = date.getHours() > 15 && date.getHours() < 5;
-    console.log({ isNightTradingTime });
+
+    // console.log({ isNightTradingTime });
     if (!specficDay && isDayTradingTime) dd = yesterday;
+    if (!specficDay && isNightTradingTime) dd = yesterday;
+
     // 盤中只能抓到昨天的資料
-    let fileDay = `${mm}${dd}`;
-    if (specficDay) fileDay = specficDay;
+
+    // 有指定日期要顯示指定日期，無指定預設為今日
+    let fileDay = specficDay ? specficDay : `${mm}${dd}`;
+    // console.log(specficDay ? specficDay : dd);
+    // console.log({ fileDay });
+    // if (specficDay) fileDay = specficDay;
 
     const filePath = process.argv[1];
     const execfileName = path.basename(filePath);
 
+    // console.log(specficDay ? specficDay : dd);
+    // console.log({ fileDay });
     let fileName;
-    execfileName === "day.js"
-      ? (fileName = `./${fileDay}日盤`)
-      : (fileName = `./${fileDay}夜盤`);
+    const isGetDayTradingData = execfileName === "day.js";
+
+    isGetDayTradingData
+      ? (fileName = `./${fileDay}盤後`)
+      : (fileName = `./${fileDay}盤前`);
 
     // console.log({ execfileName });
     // console.log({ fileName });
@@ -73,6 +84,8 @@ const tablePath =
 const getTableContent = (param1, param2) =>
   `> tr:nth-child(${param1}) > td:nth-child(${param2})`;
 
+const adjOp = (cost) => cost * -1;
+
 module.exports = {
   convertData2Csv,
   queryData,
@@ -82,4 +95,5 @@ module.exports = {
   convertFimt2Fit,
   tablePath,
   getTableContent,
+  adjOp,
 };

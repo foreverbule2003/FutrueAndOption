@@ -7,6 +7,7 @@ const {
   convertFimt2Fit,
   tablePath,
   getTableContent,
+  adjOp,
 } = require("./helper");
 
 const futureUrl = "https://www.taifex.com.tw/cht/3/futContractsDateAh";
@@ -67,12 +68,6 @@ const getFutureData = queryData(getUrl(futureUrl)).then((response) => {
   const fNetCountText = Math.round(fNetCount);
   const fNetMoney = fitNetMoney + fimtNetMoney;
   const fNetCost = Math.round((fNetMoney / fNetCount) * 5);
-  //   console.log({ fNetCount });
-  //   console.log({ fNetMoney });
-  //   console.log("=================");
-  //   console.log((fNetMoney / (fitNetCount + convertFimt2Fit(fimtNetCount))) * 5);
-  //   console.log("=================");
-  //   console.log((fNetMoney / fNetCount) * 5);
   const future = {
     商品: "期貨",
     淨口數: fNetCountText,
@@ -120,19 +115,45 @@ const getOptionData = queryData(getUrl(optionUrl)).then((response) => {
   const putShortMoney = putDealerShortMoney + putForeignShortMoney;
 
   // 千元與一點五十元 => *1000 /50 = 20
-  const callLongCost = Math.round((callLongMoney / callLongCount) * 20);
-  const putLongCost = Math.round((putLongMoney / putLongCount) * 20);
 
-  const callShortCost = Math.round((callShortMoney / callShortCount) * 20);
-  const putShortCost = Math.round((putShortMoney / putShortCount) * 20);
+  // callNetCount 正: BC，負: SC
+  // callNetMoney 的正負值和 BC、SC 的組合，解讀 callNetCost 的正負含意
+
+  // callNetCount  callNetMoney  callNetCount
+  // BC            為正          付出權利金 => +
+  // BC            為負          收取權利金 => -
+  // SC            為正          收取權利金 => -
+  // SC            為負          付出權利金 => +
 
   const callNetCount = callLongCount - callShortCount;
   const callNetMoney = callLongMoney - callShortMoney;
-  const callNetCost = Math.round((callNetMoney / callNetCount) * 20);
+  let callNetCost = Math.round((callNetMoney / callNetCount) * 20);
+  if (callNetCount > 0 && callNetMoney < 0) callNetCost = adjOp(callNetCost);
+  if (callNetCount < 0 && callNetMoney < 0) callNetCost = adjOp(callNetCost);
+
+  // putNetCount 正: BP，負: SP
+  // putNetMoney 的正負值和 BP、SP 的組合，解讀 putNetCost 的正負含意
+
+  // putNetCount  putNetMoney  putNetCount
+  // BP            為正          付出權利金 => +
+  // BP            為負          收取權利金 => -
+  // SP            為正          收取權利金 => -
+  // SP            為負          付出權利金 => +
 
   const putNetCount = putLongCount - putShortCount;
   const putNetMoney = putLongMoney - putShortMoney;
-  const putNetCost = Math.round((putNetMoney / putNetCount) * 20);
+  let putNetCost = Math.round((putNetMoney / putNetCount) * 20);
+  if (putNetCount < 0 && putNetMoney > 0) putNetCost = adjOp(putNetCost);
+  if (putNetCount < 0 && putNetMoney < 0) putNetCost = adjOp(putNetCost);
+
+  //   if (putNetCount > 0) console.log({ callNetCount });
+  console.log({ callNetCount });
+  console.log({ callNetMoney });
+  console.log({ callNetCost });
+  console.log("================");
+  console.log({ putNetCount });
+  console.log({ putNetMoney });
+  console.log({ putNetCost });
   const call = {
     商品: "CALL",
     淨口數: callNetCount,

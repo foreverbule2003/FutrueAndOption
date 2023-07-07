@@ -7,6 +7,7 @@ const {
   convertFimt2Fit,
   tablePath,
   getTableContent,
+  adjOp,
 } = require("./helper");
 
 const futureUrl = "https://www.taifex.com.tw/cht/3/futContractsDate";
@@ -117,7 +118,7 @@ const getFutureData = queryData(getUrl(futureUrl)).then((response) => {
   const oiFNetCost = Math.round((oiFNetMoney / oiFNetCount) * 5);
 
   const future = {
-    商品: "期貨",
+    商品: "台指",
     買方口數: fLongCountText,
     買方成本: fLongCost,
     賣方口數: fShortCountText,
@@ -175,11 +176,16 @@ const getOptionData = queryData(getUrl(optionUrl)).then((response) => {
 
   const callNetCount = callLongCount - callShortCount;
   const callNetMoney = callLongMoney - callShortMoney;
-  const callNetCost = Math.round((callNetMoney / callNetCount) * 20);
+
+  let callNetCost = Math.round((callNetMoney / callNetCount) * 20);
+  if (callNetCount > 0 && callNetMoney < 0) callNetCost = adjOp(callNetCost);
+  if (callNetCount < 0 && callNetMoney < 0) callNetCost = adjOp(callNetCost);
 
   const putNetCount = putLongCount - putShortCount;
   const putNetMoney = putLongMoney - putShortMoney;
-  const putNetCost = Math.round((putNetMoney / putNetCount) * 20);
+  let putNetCost = Math.round((putNetMoney / putNetCount) * 20);
+  if (putNetCount < 0 && putNetMoney > 0) putNetCost = adjOp(putNetCost);
+  if (putNetCount < 0 && putNetMoney < 0) putNetCost = adjOp(putNetCost);
 
   const oiCallDealerNetCount = getHtmlContent(mergeContent($, 4, 15, "c", "o"));
   const oiCallForeignNetCount = getHtmlContent(
