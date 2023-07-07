@@ -7,7 +7,8 @@ const {
   convertFimt2Fit,
   tablePath,
   getTableContent,
-  adjOp,
+  calCallNetCost,
+  calPutNetCost,
 } = require("./helper");
 
 const futureUrl = "https://www.taifex.com.tw/cht/3/futContractsDateAh";
@@ -82,8 +83,6 @@ const getOptionData = queryData(getUrl(optionUrl)).then((response) => {
   const callDealerLongCount = getHtmlContent(mergeContent($, 4, 5, "c", "o"));
   const callForeignLongCount = getHtmlContent(mergeContent($, 6, 2, "c", "o"));
 
-  //   console.log({ callDealerLongCount });
-  //   console.log({ callForeignLongCount });
   const callLongCount = callDealerLongCount + callForeignLongCount;
 
   const putDealerLongCount = getHtmlContent(mergeContent($, 7, 3, "c", "o"));
@@ -116,44 +115,18 @@ const getOptionData = queryData(getUrl(optionUrl)).then((response) => {
 
   // 千元與一點五十元 => *1000 /50 = 20
 
-  // callNetCount 正: BC，負: SC
-  // callNetMoney 的正負值和 BC、SC 的組合，解讀 callNetCost 的正負含意
-
-  // callNetCount  callNetMoney  callNetCount
-  // BC            為正          付出權利金 => +
-  // BC            為負          收取權利金 => -
-  // SC            為正          收取權利金 => -
-  // SC            為負          付出權利金 => +
-
   const callNetCount = callLongCount - callShortCount;
   const callNetMoney = callLongMoney - callShortMoney;
-  let callNetCost = Math.round((callNetMoney / callNetCount) * 20);
-  if (callNetCount > 0 && callNetMoney < 0) callNetCost = adjOp(callNetCost);
-  if (callNetCount < 0 && callNetMoney < 0) callNetCost = adjOp(callNetCost);
 
-  // putNetCount 正: BP，負: SP
-  // putNetMoney 的正負值和 BP、SP 的組合，解讀 putNetCost 的正負含意
-
-  // putNetCount  putNetMoney  putNetCount
-  // BP            為正          付出權利金 => +
-  // BP            為負          收取權利金 => -
-  // SP            為正          收取權利金 => -
-  // SP            為負          付出權利金 => +
+  const callNetCost = calCallNetCost(callNetMoney, callNetCount);
+  console.log({ callNetCount });
+  console.log({ callNetMoney });
 
   const putNetCount = putLongCount - putShortCount;
   const putNetMoney = putLongMoney - putShortMoney;
-  let putNetCost = Math.round((putNetMoney / putNetCount) * 20);
-  if (putNetCount < 0 && putNetMoney > 0) putNetCost = adjOp(putNetCost);
-  if (putNetCount < 0 && putNetMoney < 0) putNetCost = adjOp(putNetCost);
 
-  //   if (putNetCount > 0) console.log({ callNetCount });
-  console.log({ callNetCount });
-  console.log({ callNetMoney });
-  console.log({ callNetCost });
-  console.log("================");
-  console.log({ putNetCount });
-  console.log({ putNetMoney });
-  console.log({ putNetCost });
+  const putNetCost = calPutNetCost(putNetMoney, putNetCount);
+
   const call = {
     商品: "CALL",
     淨口數: callNetCount,

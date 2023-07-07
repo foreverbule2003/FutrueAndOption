@@ -44,8 +44,8 @@ const convertData2Csv = (data) => {
     const isGetDayTradingData = execfileName === "day.js";
 
     isGetDayTradingData
-      ? (fileName = `./${fileDay}盤後`)
-      : (fileName = `./${fileDay}盤前`);
+      ? (fileName = `./${fileDay}盤後回顧`)
+      : (fileName = `./${fileDay}盤前回顧(昨夜交易資料)`);
 
     // console.log({ execfileName });
     // console.log({ fileName });
@@ -86,6 +86,38 @@ const getTableContent = (param1, param2) =>
 
 const adjOp = (cost) => cost * -1;
 
+// callNetCount 正: BC，負: SC
+// callNetMoney 的正負值和 BC、SC 的組合，解讀 callNetCost 的正負含意
+
+// callNetCount  callNetMoney  callNetCount
+// BC            為正          付出權利金 => +
+// BC            為負          收取權利金 => -
+// SC            為正          收取權利金 => -
+// SC            為負          付出權利金 => +
+
+const calCallNetCost = (callNetMoney, callNetCount) => {
+  let callNetCost = Math.round((callNetMoney / callNetCount) * 20);
+  if (callNetCount < 0 && callNetMoney < 0) callNetCost = adjOp(callNetCost);
+  if (callNetCount < 0 && callNetMoney > 0) callNetCost = adjOp(callNetCost);
+  return callNetCost;
+};
+
+// putNetCount 正: BP，負: SP
+// putNetMoney 的正負值和 BP、SP 的組合，解讀 putNetCost 的正負含意
+
+// putNetCount  putNetMoney  putNetCount
+// BP            為正          付出權利金 => +
+// BP            為負          收取權利金 => -
+// SP            為正          收取權利金 => -
+// SP            為負          付出權利金 => +
+
+const calPutNetCost = (putNetMoney, putNetCount) => {
+  let putNetCost = Math.round((putNetMoney / putNetCount) * 20);
+  if (putNetCount < 0 && putNetMoney > 0) putNetCost = adjOp(putNetCost);
+  if (putNetCount < 0 && putNetMoney < 0) putNetCost = adjOp(putNetCost);
+  return putNetCost;
+};
+
 module.exports = {
   convertData2Csv,
   queryData,
@@ -95,5 +127,6 @@ module.exports = {
   convertFimt2Fit,
   tablePath,
   getTableContent,
-  adjOp,
+  calCallNetCost,
+  calPutNetCost,
 };

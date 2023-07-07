@@ -7,7 +7,8 @@ const {
   convertFimt2Fit,
   tablePath,
   getTableContent,
-  adjOp,
+  calCallNetCost,
+  calPutNetCost,
 } = require("./helper");
 
 const futureUrl = "https://www.taifex.com.tw/cht/3/futContractsDate";
@@ -177,15 +178,14 @@ const getOptionData = queryData(getUrl(optionUrl)).then((response) => {
   const callNetCount = callLongCount - callShortCount;
   const callNetMoney = callLongMoney - callShortMoney;
 
-  let callNetCost = Math.round((callNetMoney / callNetCount) * 20);
-  if (callNetCount > 0 && callNetMoney < 0) callNetCost = adjOp(callNetCost);
-  if (callNetCount < 0 && callNetMoney < 0) callNetCost = adjOp(callNetCost);
+  const callNetCost = calCallNetCost(callNetMoney, callNetCount);
+  // console.log({ callNetCount });
+  // console.log({ callNetMoney });
 
   const putNetCount = putLongCount - putShortCount;
   const putNetMoney = putLongMoney - putShortMoney;
-  let putNetCost = Math.round((putNetMoney / putNetCount) * 20);
-  if (putNetCount < 0 && putNetMoney > 0) putNetCost = adjOp(putNetCost);
-  if (putNetCount < 0 && putNetMoney < 0) putNetCost = adjOp(putNetCost);
+
+  const putNetCost = calPutNetCost(putNetMoney, putNetCount);
 
   const oiCallDealerNetCount = getHtmlContent(mergeContent($, 4, 15, "c", "o"));
   const oiCallForeignNetCount = getHtmlContent(
@@ -203,12 +203,15 @@ const getOptionData = queryData(getUrl(optionUrl)).then((response) => {
     mergeContent($, 6, 13, "m", "o")
   );
   const oiCallNetMoney = oiCallDealerNetMoney + oiCallForeignNetMoney;
-  const oiCallNetCost = Math.round((oiCallNetMoney / oiCallNetCount) * 20);
+  const oiCallNetCost = calCallNetCost(oiCallNetMoney, oiCallNetCount);
+  console.log({ oiCallNetMoney });
+  console.log({ oiCallNetCount });
 
   const oiPutDealerNetMoney = getHtmlContent(mergeContent($, 7, 14, "m", "o"));
   const oiPutForeignNetMoney = getHtmlContent(mergeContent($, 9, 13, "m", "o"));
   const oiPutNetMoney = oiPutDealerNetMoney + oiPutForeignNetMoney;
-  const oiPutNetCost = Math.round((oiPutNetMoney / oiPutNetCount) * 20);
+
+  const oiPutNetCost = calPutNetCost(oiPutNetMoney, oiPutNetCount);
 
   const call = {
     商品: "CALL",
