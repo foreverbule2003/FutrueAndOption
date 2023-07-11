@@ -3,6 +3,14 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const path = require("path");
 
+const {
+  tablePath,
+  fTableContentPath4Count,
+  fTableContentPath4Money,
+  oTableContentPath4Count,
+  oTableContentPath4Money,
+} = require("./const");
+
 const convertData2Csv = (data) => {
   (async () => {
     const csv = new ObjectsToCsv(data);
@@ -71,6 +79,21 @@ const getTableContent = (param1, param2) =>
 
 const isCount = (param) => param === "count";
 
+const mergeContent = (domEle, param1, param2, type, product = "future") => {
+  const domPath =
+    product === "future"
+      ? `${tablePath} ${getTableContent(param1, param2)} ${
+          isCount(type) ? fTableContentPath4Count : fTableContentPath4Money
+        }`
+      : `${tablePath} ${getTableContent(param1, param2)} ${
+          isCount(type) ? oTableContentPath4Count : oTableContentPath4Money
+        }`;
+  // console.log({ domPath });
+  const result = domEle(domPath);
+  // console.log(result);
+  return result;
+};
+
 const adjOp = (cost) => cost * -1;
 
 //
@@ -109,4 +132,5 @@ module.exports = {
   getTableContent,
   adjNetCost,
   isCount,
+  mergeContent,
 };

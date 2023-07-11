@@ -8,35 +8,11 @@ const {
   getTableContent,
   adjNetCost,
   isCount,
+  mergeContent,
 } = require("./helper");
-
-const {
-  tablePath,
-  fTableContentPath4Count,
-  fTableContentPath4Money,
-  oTableContentPath4Count,
-  oTableContentPath4Money,
-} = require("./const");
 
 const futureUrl = "https://www.taifex.com.tw/cht/3/futContractsDate";
 const optionUrl = "https://www.taifex.com.tw/cht/3/callsAndPutsDate";
-
-// product: future or option
-// type: count or money
-const mergeContent = (domEle, param1, param2, type, product = "future") => {
-  const domPath =
-    product === "future"
-      ? `${tablePath} ${getTableContent(param1, param2)} ${
-          isCount(type) ? fTableContentPath4Count : fTableContentPath4Money
-        }`
-      : `${tablePath} ${getTableContent(param1, param2)} ${
-          isCount(type) ? oTableContentPath4Count : oTableContentPath4Money
-        }`;
-  // console.log({ domPath });
-  const result = domEle(domPath);
-  // console.log(result);
-  return result;
-};
 
 let data = [];
 const getFutureData = queryData(getUrl(futureUrl)).then((response) => {
