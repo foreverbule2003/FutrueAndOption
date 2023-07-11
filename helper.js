@@ -6,7 +6,6 @@ const path = require("path");
 const convertData2Csv = (data) => {
   (async () => {
     const csv = new ObjectsToCsv(data);
-
     const date = new Date();
 
     // month start from 0
@@ -14,16 +13,12 @@ const convertData2Csv = (data) => {
     let dd = String(date.getDate()).padStart(2, "0");
     const yesterday = String(date.getDate() - 1).padStart(2, "0");
     const tomorrow = String(date.getDate() + 1).padStart(2, "0");
-    // console.log({ mm });
-    // console.log({ dd });
-    // console.log({ tomorrow });
     let specficDay = process.argv[2];
 
     // 盤中只能抓到昨天的資料
     const isDayTradingTime = date.getHours() > 9 && date.getHours() < 14;
     const isNightTradingTime = date.getHours() > 15 && date.getHours() < 5;
 
-    // console.log({ isNightTradingTime });
     if (!specficDay && isDayTradingTime) dd = yesterday;
     if (!specficDay && isNightTradingTime) dd = yesterday;
 
@@ -31,24 +26,16 @@ const convertData2Csv = (data) => {
 
     // 有指定日期要顯示指定日期，無指定預設為今日
     let fileDay = specficDay ? specficDay : `${mm}${dd}`;
-    // console.log(specficDay ? specficDay : dd);
-    // console.log({ fileDay });
-    // if (specficDay) fileDay = specficDay;
 
     const filePath = process.argv[1];
     const execfileName = path.basename(filePath);
 
-    // console.log(specficDay ? specficDay : dd);
-    // console.log({ fileDay });
     let fileName;
     const isGetDayTradingData = execfileName === "day.js";
 
     isGetDayTradingData
       ? (fileName = `./${fileDay}盤後回顧`)
       : (fileName = `./${fileDay}盤前回顧(昨夜交易資料)`);
-
-    // console.log({ execfileName });
-    // console.log({ fileName });
 
     // Save to file:
     await csv.toDisk(`./${fileName}.csv`);
@@ -78,46 +65,40 @@ const repData = (response) => cheerio.load(response);
 const toNumber = (content) => Number(content.replace(/[^0-9.-]+/g, ""));
 const getHtmlContent = (content) => toNumber(content.text());
 const convertFimt2Fit = (fimt) => fimt / 4;
-const tablePath =
-  "#printhere > div:nth-child(4) > table > tbody > tr:nth-child(2) > td > table > tbody";
 
 const getTableContent = (param1, param2) =>
   `> tr:nth-child(${param1}) > td:nth-child(${param2})`;
 
+const isCount = (param) => param === "count";
+
 const adjOp = (cost) => cost * -1;
 
-// callNetCount 正: BC，負: SC
-// callNetMoney 的正負值和 BC、SC 的組合，解讀 callNetCost 的正負含意
+//
+// Call, netCount 正: BC，負: SC
+// netMoney 的正負值和 BC、SC 的組合，解讀 netCost 的正負含意
 
-// callNetCount  callNetMoney  callNetCount
-// BC            為正          付出權利金 => +
-// BC            為負          收取權利金 => -
-// SC            為正          收取權利金 => -
-// SC            為負          付出權利金 => +
+// netCount  netMoney  netCount
+// BC        為正      付出權利金比較多 => +
+// BC        為負      收取權利金比較少(也就是付出) => -
+// SC        為正      收取權利金比較多 => -
+// SC        為負      付出權利金比較少 => +
 
-const calCallNetCost = (callNetMoney, callNetCount) => {
-  let callNetCost = Math.round((callNetMoney / callNetCount) * 20);
-  if (callNetCount < 0 && callNetMoney < 0) callNetCost = adjOp(callNetCost);
-  if (callNetCount < 0 && callNetMoney > 0) callNetCost = adjOp(callNetCost);
-  return callNetCost;
-};
+//
+// Put, netCount 正: BP，負: SP
+// netMoney 的正負值和 BP、SP 的組合，解讀 netCost 的正負含意
 
-// putNetCount 正: BP，負: SP
-// putNetMoney 的正負值和 BP、SP 的組合，解讀 putNetCost 的正負含意
+// netCount  netMoney  netCount
+// BP        為正      付出權利金比較多 => +
+// BP        為負      收取權利金比較少(也就是付出) => -
+// SP        為正      收取權利金比較多 => -
+// SP        為負      付出權利金比較少 => +
 
-// putNetCount  putNetMoney  putNetCount
-// BP            為正          付出權利金 => +
-// BP            為負          收取權利金 => -
-// SP            為正          收取權利金 => -
-// SP            為負          付出權利金 => +
-
-const calPutNetCost = (putNetMoney, putNetCount) => {
-  let putNetCost = Math.round((putNetMoney / putNetCount) * 20);
-  if (putNetCount < 0 && putNetMoney > 0) putNetCost = adjOp(putNetCost);
-  if (putNetCount < 0 && putNetMoney < 0) putNetCost = adjOp(putNetCost);
+const adjNetCost = (netMoney, netCount) => {
+  let putNetCost = Math.round((netMoney / netCount) * 20);
+  if (netCount < 0 && netMoney > 0) putNetCost = adjOp(putNetCost);
+  if (netCount < 0 && netMoney < 0) putNetCost = adjOp(putNetCost);
   return putNetCost;
 };
-
 module.exports = {
   convertData2Csv,
   queryData,
@@ -125,8 +106,7 @@ module.exports = {
   repData,
   getUrl,
   convertFimt2Fit,
-  tablePath,
   getTableContent,
-  calCallNetCost,
-  calPutNetCost,
+  adjNetCost,
+  isCount,
 };

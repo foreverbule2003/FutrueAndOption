@@ -5,26 +5,27 @@ const {
   repData,
   getUrl,
   convertFimt2Fit,
-  tablePath,
   getTableContent,
-  calCallNetCost,
-  calPutNetCost,
+  adjNetCost,
+  isCount,
 } = require("./helper");
+
+const {
+  tablePath,
+  fTableContentPath4Count,
+  fTableContentPath4Money,
+  oTableContentPath4Count,
+  oTableContentPath4Money,
+} = require("./const");
 
 const futureUrl = "https://www.taifex.com.tw/cht/3/futContractsDateAh";
 const optionUrl = "https://www.taifex.com.tw/cht/3/callsAndPutsDateAh";
 
-const fTableContentPath4Count = "> div:nth-child(1) > font";
-const fTableContentPath4Money = "> div:nth-child(1)";
-const oTableContentPath4Count = "> font";
-const oTableContentPath4Money = "";
-const isCount = (param) => param === "c";
-
 // product: future or option
 // type: count or money
-const mergeContent = (domEle, param1, param2, type, product = "f") => {
+const mergeContent = (domEle, param1, param2, type, product = "future") => {
   const domPath =
-    product === "f"
+    product === "future"
       ? `${tablePath} ${getTableContent(param1, param2)} ${
           isCount(type) ? fTableContentPath4Count : fTableContentPath4Money
         }`
@@ -42,26 +43,26 @@ let data = [];
 const getFutureData = queryData(getUrl(futureUrl)).then((response) => {
   const $ = repData(response);
 
-  const fitDealerNetCount = getHtmlContent(mergeContent($, 4, 8, "c"));
-  const fitForeignNetCount = getHtmlContent(mergeContent($, 6, 6, "c"));
+  const fitDealerNetCount = getHtmlContent(mergeContent($, 4, 8, "count"));
+  const fitForeignNetCount = getHtmlContent(mergeContent($, 6, 6, "count"));
 
   const fitNetCount = fitDealerNetCount + fitForeignNetCount;
   //   console.log({ fitNetCount });
 
-  const fimtDealerNetCount = getHtmlContent(mergeContent($, 10, 8, "c"));
-  const fimtForeignNetCount = getHtmlContent(mergeContent($, 12, 6, "c"));
+  const fimtDealerNetCount = getHtmlContent(mergeContent($, 10, 8, "count"));
+  const fimtForeignNetCount = getHtmlContent(mergeContent($, 12, 6, "count"));
 
   const fimtNetCount = fimtDealerNetCount + fimtForeignNetCount;
 
-  const fitDealerNetMoney = getHtmlContent(mergeContent($, 4, 9, "m"));
-  const fitForeignNetMoney = getHtmlContent(mergeContent($, 6, 7, "m"));
+  const fitDealerNetMoney = getHtmlContent(mergeContent($, 4, 9, "money"));
+  const fitForeignNetMoney = getHtmlContent(mergeContent($, 6, 7, "money"));
   const fitNetMoney = fitDealerNetMoney + fitForeignNetMoney;
 
   //   console.log({ fitDealerNetMoney });
   //   console.log({ fitForeignNetMoney });
 
-  const fimtDealerNetMoney = getHtmlContent(mergeContent($, 10, 9, "m"));
-  const fimtForeignNetMoney = getHtmlContent(mergeContent($, 12, 7, "m"));
+  const fimtDealerNetMoney = getHtmlContent(mergeContent($, 10, 9, "money"));
+  const fimtForeignNetMoney = getHtmlContent(mergeContent($, 12, 7, "money"));
   const fimtNetMoney = fimtDealerNetMoney + fimtForeignNetMoney;
   // 千元與一點兩百元 => *1000 /200 = 5
 
@@ -80,37 +81,69 @@ const getFutureData = queryData(getUrl(futureUrl)).then((response) => {
 const getOptionData = queryData(getUrl(optionUrl)).then((response) => {
   const $ = repData(response);
 
-  const callDealerLongCount = getHtmlContent(mergeContent($, 4, 5, "c", "o"));
-  const callForeignLongCount = getHtmlContent(mergeContent($, 6, 2, "c", "o"));
+  const callDealerLongCount = getHtmlContent(
+    mergeContent($, 4, 5, "count", "option")
+  );
+  const callForeignLongCount = getHtmlContent(
+    mergeContent($, 6, 2, "count", "option")
+  );
 
   const callLongCount = callDealerLongCount + callForeignLongCount;
 
-  const putDealerLongCount = getHtmlContent(mergeContent($, 7, 3, "c", "o"));
-  const putForeignLongCount = getHtmlContent(mergeContent($, 9, 2, "c", "o"));
+  const putDealerLongCount = getHtmlContent(
+    mergeContent($, 7, 3, "count", "option")
+  );
+  const putForeignLongCount = getHtmlContent(
+    mergeContent($, 9, 2, "count", "option")
+  );
   const putLongCount = putDealerLongCount + putForeignLongCount;
 
-  const callDealerShortCount = getHtmlContent(mergeContent($, 4, 7, "c", "o"));
-  const callForeignShortCount = getHtmlContent(mergeContent($, 6, 4, "c", "o"));
+  const callDealerShortCount = getHtmlContent(
+    mergeContent($, 4, 7, "count", "option")
+  );
+  const callForeignShortCount = getHtmlContent(
+    mergeContent($, 6, 4, "count", "option")
+  );
   const callShortCount = callDealerShortCount + callForeignShortCount;
 
-  const putDealerShortCount = getHtmlContent(mergeContent($, 7, 5, "c", "o"));
-  const putForeignShortCount = getHtmlContent(mergeContent($, 9, 4, "c", "o"));
+  const putDealerShortCount = getHtmlContent(
+    mergeContent($, 7, 5, "count", "option")
+  );
+  const putForeignShortCount = getHtmlContent(
+    mergeContent($, 9, 4, "count", "option")
+  );
   const putShortCount = putDealerShortCount + putForeignShortCount;
 
-  const callDealerLongMoney = getHtmlContent(mergeContent($, 4, 6, "m", "o"));
-  const callForeignLongMoney = getHtmlContent(mergeContent($, 6, 3, "m", "o"));
+  const callDealerLongMoney = getHtmlContent(
+    mergeContent($, 4, 6, "money", "option")
+  );
+  const callForeignLongMoney = getHtmlContent(
+    mergeContent($, 6, 3, "money", "option")
+  );
   const callLongMoney = callDealerLongMoney + callForeignLongMoney;
 
-  const putDealerLongMoney = getHtmlContent(mergeContent($, 7, 4, "m", "o"));
-  const putForeignLongMoney = getHtmlContent(mergeContent($, 9, 3, "m", "o"));
+  const putDealerLongMoney = getHtmlContent(
+    mergeContent($, 7, 4, "money", "option")
+  );
+  const putForeignLongMoney = getHtmlContent(
+    mergeContent($, 9, 3, "money", "option")
+  );
   const putLongMoney = putDealerLongMoney + putForeignLongMoney;
 
-  const callDealerShortMoney = getHtmlContent(mergeContent($, 4, 8, "m", "o"));
-  const callForeignShortMoney = getHtmlContent(mergeContent($, 6, 5, "m", "o"));
+  const callDealerShortMoney = getHtmlContent(
+    mergeContent($, 4, 8, "money", "option")
+  );
+  const callForeignShortMoney = getHtmlContent(
+    mergeContent($, 6, 5, "money", "option")
+  );
   const callShortMoney = callDealerShortMoney + callForeignShortMoney;
 
-  const putDealerShortMoney = getHtmlContent(mergeContent($, 7, 6, "m", "o"));
-  const putForeignShortMoney = getHtmlContent(mergeContent($, 9, 5, "m", "o"));
+  const putDealerShortMoney = getHtmlContent(
+    mergeContent($, 7, 6, "money", "option")
+  );
+  const putForeignShortMoney = getHtmlContent(
+    mergeContent($, 9, 5, "money", "option")
+  );
   const putShortMoney = putDealerShortMoney + putForeignShortMoney;
 
   // 千元與一點五十元 => *1000 /50 = 20
@@ -118,14 +151,14 @@ const getOptionData = queryData(getUrl(optionUrl)).then((response) => {
   const callNetCount = callLongCount - callShortCount;
   const callNetMoney = callLongMoney - callShortMoney;
 
-  const callNetCost = calCallNetCost(callNetMoney, callNetCount);
-  console.log({ callNetCount });
-  console.log({ callNetMoney });
+  const callNetCost = adjNetCost(callNetMoney, callNetCount);
+  // console.log({ callNetCount });
+  // console.log({ callNetMoney });
 
   const putNetCount = putLongCount - putShortCount;
   const putNetMoney = putLongMoney - putShortMoney;
 
-  const putNetCost = calPutNetCost(putNetMoney, putNetCount);
+  const putNetCost = adjNetCost(putNetMoney, putNetCount);
 
   const call = {
     商品: "CALL",
