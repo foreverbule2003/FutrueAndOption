@@ -71,7 +71,10 @@ const getUrl = (url) => {
 
 const repData = (response) => cheerio.load(response);
 const toNumber = (content) => Number(content.replace(/[^0-9.-]+/g, ""));
-const getHtmlContent = (content) => toNumber(content.text());
+const getHtmlContent = (content) => {
+  const result = mergeContent(...content).text();
+  return toNumber(result);
+};
 const convertFimt2Fit = (fimt) => fimt / 4;
 
 const getTableContent = (param1, param2) =>
