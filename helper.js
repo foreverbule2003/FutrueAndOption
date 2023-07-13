@@ -99,7 +99,6 @@ const mergeContent = (domEle, param1, param2, type, product = "future") => {
 
 const adjOp = (cost) => cost * -1;
 
-//
 // Call, netCount 正: BC，負: SC
 // netMoney 的正負值和 BC、SC 的組合，解讀 netCost 的正負含意
 
@@ -109,7 +108,6 @@ const adjOp = (cost) => cost * -1;
 // SC        為正      收取權利金比較多 => -
 // SC        為負      付出權利金比較少 => +
 
-//
 // Put, netCount 正: BP，負: SP
 // netMoney 的正負值和 BP、SP 的組合，解讀 netCost 的正負含意
 
@@ -125,6 +123,7 @@ const adjNetCost = (netMoney, netCount) => {
   if (netCount < 0 && netMoney < 0) putNetCost = adjOp(putNetCost);
   return putNetCost;
 };
+
 module.exports = {
   convertData2Csv,
   queryData,

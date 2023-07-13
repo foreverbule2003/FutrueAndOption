@@ -5,9 +5,7 @@ const {
   repData,
   getUrl,
   convertFimt2Fit,
-  getTableContent,
   adjNetCost,
-  isCount,
 } = require("./helper");
 
 const futureUrl = "https://www.taifex.com.tw/cht/3/futContractsDate";
@@ -25,7 +23,7 @@ const getFutureData = queryData(getUrl(futureUrl)).then((response) => {
   const fitForeignShortCount = getHtmlContent([$, 6, 4, "count"]);
   const fitShortCount = fitDealerShortCount + fitForeignShortCount;
 
-  const fitNetCount = fitLongCount - fitShortCount;
+  // const fitNetCount = fitLongCount - fitShortCount;
 
   const fimtDealerLongCount = getHtmlContent([$, 13, 4, "count"]);
   const fimtForeignLongCount = getHtmlContent([$, 15, 2, "count"]);
@@ -35,7 +33,7 @@ const getFutureData = queryData(getUrl(futureUrl)).then((response) => {
   const fimtForeignShortCount = getHtmlContent([$, 15, 4, "count"]);
   const fimtShortCount = fimtDealerShortCount + fimtForeignShortCount;
 
-  const fimtNetCount = fimtLongCount - fimtShortCount;
+  // const fimtNetCount = fimtLongCount - fimtShortCount;
 
   const fLongCount = fitLongCount + convertFimt2Fit(fimtLongCount);
   const fLongCountText = Math.round(fLongCount);
