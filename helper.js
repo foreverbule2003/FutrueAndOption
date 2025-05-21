@@ -25,7 +25,7 @@ const convertData2Csv = (data) => {
 
     // 盤中只能抓到昨天的資料
     const isDayTradingTime = date.getHours() > 9 && date.getHours() < 14;
-    const isNightTradingTime = date.getHours() > 15 && date.getHours() < 5;
+    const isNightTradingTime = date.getHours() >= 15 || date.getHours() < 5;
 
     if (!specficDay && isDayTradingTime) dd = yesterday;
     if (!specficDay && isNightTradingTime) dd = yesterday;
@@ -135,4 +135,5 @@ module.exports = {
   adjNetCost,
   isCount,
   mergeContent,
+  toNumber,
 };
